@@ -28,7 +28,7 @@ jobs:
       run: |
         echo '${{ secrets.SETTINGS_JSON }}' > settings.json
         echo '${{ secrets.CREDENTIALS_JSON }}' > credentials.json
-        echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > service_account.json
+        echo '${{ secrets.TOKEN_JSON }}' > token.json
     
     - name: Clone or create state repository
       run: |

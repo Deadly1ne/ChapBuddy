@@ -1147,7 +1147,7 @@ def process_series(series, drive_service):
         return
     
     # Safety limit: don't process more than 5 chapters per run to prevent overwhelming the system
-    MAX_CHAPTERS_PER_RUN = 5
+    MAX_CHAPTERS_PER_RUN = 1
     if len(new_chapters) > MAX_CHAPTERS_PER_RUN:
         logger.warning(f"Found {len(new_chapters)} new chapters for {series['name']}, but limiting to {MAX_CHAPTERS_PER_RUN} per run for safety")
         new_chapters = new_chapters[:MAX_CHAPTERS_PER_RUN]

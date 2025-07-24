@@ -28,11 +28,11 @@ An automated manga chapter downloader and processor that monitors manga websites
    ```
 
 3. Create configuration files:
-   - `config.json`: Manga series configuration
-   - `settings.json`: Discord webhook and Google Drive settings
+   - `settings.json`: Discord webhook and Google Drive settings (use settings.example.json as template)
    - `credentials.json`: Google OAuth credentials
    - `service-account.json`: Google Service Account credentials
    - `state.json`: Processing state (auto-generated)
+   - `config.json`: Will be automatically created/updated when you add manga series
 
 ### 2. Google Drive Setup
 
@@ -49,7 +49,15 @@ An automated manga chapter downloader and processor that monitors manga websites
 
 ### 4. Configuration Files
 
-#### config.json
+#### settings.json (create from settings.example.json)
+```json
+{
+  "discord_webhook": "YOUR_DISCORD_WEBHOOK_URL",
+  "root_drive_folder_id": "YOUR_ROOT_GOOGLE_DRIVE_FOLDER_ID"
+}
+```
+
+#### config.json (automatically managed)
 ```json
 {
   "series": [
@@ -63,13 +71,7 @@ An automated manga chapter downloader and processor that monitors manga websites
 }
 ```
 
-#### settings.json
-```json
-{
-  "discord_webhook": "YOUR_DISCORD_WEBHOOK_URL",
-  "root_drive_folder_id": "YOUR_ROOT_GOOGLE_DRIVE_FOLDER_ID"
-}
-```
+**Note**: You can now directly edit and commit `config.json` to add new manga series since sensitive data is separated into `settings.json`.
 
 #### state.json (auto-generated)
 ```json

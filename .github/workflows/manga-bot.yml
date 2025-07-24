@@ -24,9 +24,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Create config files from secrets
+    - name: Create sensitive config files from secrets
       run: |
-        echo '${{ secrets.CONFIG_JSON }}' > config.json
         echo '${{ secrets.SETTINGS_JSON }}' > settings.json
         echo '${{ secrets.CREDENTIALS_JSON }}' > credentials.json
         echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > service_account.json

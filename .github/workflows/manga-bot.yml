@@ -63,9 +63,9 @@ jobs:
           git push
         }
       
-    - name: Upload logs as artifact
+    - name: Upload logs
+      uses: actions/upload-artifact@v4
       if: always()
-      uses: actions/upload-artifact@v3
       with:
         name: manga-bot-logs
         path: manga_bot.log

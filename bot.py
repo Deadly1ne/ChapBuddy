@@ -254,10 +254,35 @@ def extract_part_number(url):
         
     return 0
 
-def detect_total_parts(base_url, headers):
+def extract_parts_from_title(title):
+    """Extract part information from chapter title using (current/total) pattern"""
+    try:
+        # Look for patterns like (1/4), (2/3), etc.
+        match = re.search(r'\((\d+)/(\d+)\)', title)
+        if match:
+            current_part = int(match.group(1))
+            total_parts = int(match.group(2))
+            logger.info(f"Found part info in title: {current_part}/{total_parts}")
+            return current_part, total_parts
+        
+        # If no pattern found, assume single part
+        return 1, 1
+        
+    except Exception as e:
+        logger.warning(f"Failed to extract parts from title '{title}': {e}")
+        return 1, 1
+
+def detect_total_parts(base_url, headers, chapter_title=None):
     """Dynamically detect the total number of parts for a chapter"""
     try:
-        # Extract base pattern from URL
+        # First, try to extract from chapter title if available
+        if chapter_title:
+            current_part, total_parts = extract_parts_from_title(chapter_title)
+            if total_parts > 1:
+                logger.info(f"Using title-based part detection: {total_parts} total parts")
+                return total_parts
+        
+        # Fallback to URL-based detection
         if '_' not in base_url or '.html' not in base_url:
             return 1
         
@@ -281,7 +306,7 @@ def detect_total_parts(base_url, headers):
             except:
                 break  # Stop on any error
         
-        logger.info(f"Detected {total_parts} total parts for chapter")
+        logger.info(f"URL-based detection: {total_parts} total parts")
         return total_parts
         
     except Exception as e:
@@ -335,7 +360,7 @@ def get_real_chapter_url(url, series_url):
         return url
 
 # 3. Download and process images from all parts of a chapter
-def process_chapter(chapter_url, series_url):
+def process_chapter(chapter_url, series_url, chapter_title=None):
     logger.info(f"Processing: {chapter_url}")
     real_url = get_real_chapter_url(chapter_url, series_url)
     
@@ -354,7 +379,7 @@ def process_chapter(chapter_url, series_url):
         last_part_number = 0  # Track the last part number we processed
         
         # Dynamically detect total parts for this chapter
-        expected_total_parts = detect_total_parts(real_url, headers)
+        expected_total_parts = detect_total_parts(real_url, headers, chapter_title)
         logger.info(f"Expected total parts for chapter: {expected_total_parts}")
         
         while current_url and part_count < MAX_PARTS:
@@ -936,7 +961,7 @@ def process_single_chapter(chapter_info, series, drive_service):
     logger.info(f"Processing Chapter {chapter_number}: {chapter_title}")
     
     # Process chapter
-    images, source_url = process_chapter(chapter_url, series['manga_url'])
+    images, source_url = process_chapter(chapter_url, series['manga_url'], chapter_title)
     processing_success = bool(images)
     
     # Stitch images

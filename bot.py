@@ -41,7 +41,16 @@ def load_config():
         logger.error(f"Config loading failed: {e}")
         raise
 
+def load_settings():
+    try:
+        with open('settings.json') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Settings loading failed: {e}")
+        raise
+
 config = load_config()
+settings = load_settings()
 
 # Google Drive Setup
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -684,7 +693,7 @@ def upload_to_drive(service, images, series, chapter_number, max_retries=3):
 
 def _upload_to_drive_internal(service, images, series, chapter_number):
     # Get or create root comics folder
-    root_folder_id = config.get('root_drive_folder_id')
+    root_folder_id = settings.get('root_drive_folder_id')
     if not root_folder_id:
         folder_metadata = {
             'name': "Comics Collection",
@@ -696,11 +705,11 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
             fields='id'
         ).execute()
         root_folder_id = folder['id']
-        config['root_drive_folder_id'] = root_folder_id
+        settings['root_drive_folder_id'] = root_folder_id
         
-        # Update config file
-        with open('config.json', 'w') as f:
-            json.dump(config, f, indent=2)
+        # Update settings file
+        with open('settings.json', 'w') as f:
+            json.dump(settings, f, indent=2)
         
         logger.info(f"Created root comics folder ID: {root_folder_id}")
     
@@ -801,7 +810,7 @@ def format_chapter_title_arabic(chapter_title, chapter_number):
 
 # 6. Discord notification
 def send_notification(folder_url, chapter_url, series, chapter_number, chapter_title, processing_success, upload_success):
-    webhook_url = series.get('discord_webhook') or config.get('global_discord_webhook')
+    webhook_url = series.get('discord_webhook') or settings.get('discord_webhook')
     
     if not webhook_url:
         logger.warning("No Discord webhook configured")

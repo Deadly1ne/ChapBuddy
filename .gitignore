@@ -3,6 +3,7 @@ credentials.json
 service-account.json
 token.json
 config.json
+settings.json
 
 # Logs
 *.log

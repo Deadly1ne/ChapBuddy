@@ -1,0 +1,4 @@
+{
+  "discord_webhook": "YOUR_DISCORD_WEBHOOK_URL",
+  "root_drive_folder_id": "YOUR_ROOT_GOOGLE_DRIVE_FOLDER_ID"
+}

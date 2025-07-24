@@ -28,7 +28,8 @@ An automated manga chapter downloader and processor that monitors manga websites
    ```
 
 3. Create configuration files:
-   - `config.json`: Manga series configuration and Discord webhook
+   - `config.json`: Manga series configuration
+   - `settings.json`: Discord webhook and Google Drive settings
    - `credentials.json`: Google OAuth credentials
    - `service-account.json`: Google Service Account credentials
    - `state.json`: Processing state (auto-generated)
@@ -44,14 +45,13 @@ An automated manga chapter downloader and processor that monitors manga websites
 ### 3. Discord Setup
 
 1. Create a Discord webhook in your target channel
-2. Add the webhook URL to your `config.json`
+2. Add the webhook URL to your `settings.json`
 
 ### 4. Configuration Files
 
 #### config.json
 ```json
 {
-  "discord_webhook": "YOUR_DISCORD_WEBHOOK_URL",
   "series": [
     {
       "id": "series1",
@@ -60,6 +60,14 @@ An automated manga chapter downloader and processor that monitors manga websites
       "drive_folder_id": "GOOGLE_DRIVE_FOLDER_ID"
     }
   ]
+}
+```
+
+#### settings.json
+```json
+{
+  "discord_webhook": "YOUR_DISCORD_WEBHOOK_URL",
+  "root_drive_folder_id": "YOUR_ROOT_GOOGLE_DRIVE_FOLDER_ID"
 }
 ```
 
@@ -83,6 +91,7 @@ To run the bot automatically every 20 minutes:
 2. Go to your repository Settings → Secrets and variables → Actions
 3. Add the following secrets:
    - `CONFIG_JSON`: Content of your config.json file
+   - `SETTINGS_JSON`: Content of your settings.json file
    - `CREDENTIALS_JSON`: Content of your credentials.json file
    - `SERVICE_ACCOUNT_JSON`: Content of your service-account.json file
    - `STATE_JSON`: Content of your state.json file (initially `{}`)

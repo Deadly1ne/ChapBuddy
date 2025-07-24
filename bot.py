@@ -13,6 +13,7 @@ from discord_webhook import DiscordWebhook
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
@@ -57,10 +58,22 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 TOKEN_FILE = 'token.json'
 
 def get_drive_service():
-    """Authenticate with Google Drive using local server flow"""
+    """Authenticate with Google Drive using service account or local server flow"""
     creds = None
     
     try:
+        # Try service account authentication first (for GitHub Actions)
+        if os.path.exists('service_account.json'):
+            logger.info("Using service account authentication")
+            creds = ServiceAccountCredentials.from_service_account_file(
+                'service_account.json',
+                scopes=SCOPES
+            )
+            return build('drive', 'v3', credentials=creds)
+        
+        # Fall back to interactive authentication (for local development)
+        logger.info("Using interactive authentication")
+        
         # Load existing token if available
         if os.path.exists(TOKEN_FILE):
             creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)

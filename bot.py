@@ -866,6 +866,10 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
         with open('settings.json', 'w') as f:
             json.dump(settings, f, indent=2)
         
+        # Reload settings to ensure in-memory variable is updated
+        global settings
+        settings = load_settings()
+        
         logger.info(f"Created root comics folder ID: {root_folder_id}")
     
     # Get or create series folder
@@ -891,6 +895,10 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
         
         with open('config.json', 'w') as f:
             json.dump(config, f, indent=2)
+        
+        # Reload config to ensure in-memory variable is updated
+        global config
+        config = load_config()
         
         logger.info(f"Created series folder for {series['name']}: {series_folder_id}")
     

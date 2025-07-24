@@ -1,14 +1,25 @@
 {
   "series": [
     {
-      "id": "lord-of-summoning-when-the-world-changes",
-      "name": "Lord of Summoning When the World Changes",
+      "id": "lord-of-summoming",
+      "name": "Lord Of Summomning",
       "manga_url": "https://www.baozimh.com/comic/zhaohuanzhizhudangyibianjianglinrenjian-iciyuandongman",
       "drive_folder_id": "",
+      "drive_folder_fast_id": "1p9hSySyIDaMEFl5nJUcyPlfaknSf-a0D"
     },
     {
-      "id": "one-hundred-thousand-years-of-tribulation-by-heavenly-thunder",
-      "name": "One Hundred Thousand Years of Tribulation by Heavenly Thunder",
+      "id": "solo-leveling",
+      "name": "Solo Leveling",
+      "manga_url": "https://www.baozimh.com/comic/dudurenshijianshuzhang"
+    },
+    {
+      "id": "tower-of-god",
+      "name": "Tower of God",
+      "manga_url": "https://www.baozimh.com/comic/shenzhi-ta"
+    },
+    {
+      "id": "one-hundred-tribulation",
+      "name": "One Hundred Tribulation",
       "manga_url": "https://www.baozimh.com/comic/leijieshimonian-denghao",
       "drive_folder_id": ""
     }

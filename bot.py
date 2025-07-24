@@ -752,27 +752,39 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
         
         logger.info(f"Created series folder for {series['name']}: {series_folder_id}")
     
-    # Create chapter folder
+    # Check if chapter folder already exists
     chapter_folder_name = f"Chapter {chapter_number}"
-    chapter_folder_metadata = {
-        'name': chapter_folder_name,
-        'mimeType': 'application/vnd.google-apps.folder',
-        'parents': [series_folder_id]
-    }
+    chapter_folder_id = None
     
-    chapter_folder = service.files().create(
-        body=chapter_folder_metadata,
-        fields='id,webViewLink'
-    ).execute()
-    chapter_folder_id = chapter_folder['id']
+    # Search for existing chapter folder
+    query = f"name='{chapter_folder_name}' and '{series_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    existing_folders = service.files().list(q=query, fields='files(id, name)').execute()
     
-    # Set permissions
-    service.permissions().create(
-        fileId=chapter_folder_id,
-        body={'type': 'anyone', 'role': 'reader'}
-    ).execute()
-    
-    logger.info(f"Created chapter folder: {chapter_folder_name}")
+    if existing_folders.get('files'):
+        # Use existing folder
+        chapter_folder_id = existing_folders['files'][0]['id']
+        logger.info(f"Using existing chapter folder: {chapter_folder_name}")
+    else:
+        # Create new chapter folder
+        chapter_folder_metadata = {
+            'name': chapter_folder_name,
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [series_folder_id]
+        }
+        
+        chapter_folder = service.files().create(
+            body=chapter_folder_metadata,
+            fields='id,webViewLink'
+        ).execute()
+        chapter_folder_id = chapter_folder['id']
+        
+        # Set permissions
+        service.permissions().create(
+            fileId=chapter_folder_id,
+            body={'type': 'anyone', 'role': 'reader'}
+        ).execute()
+        
+        logger.info(f"Created new chapter folder: {chapter_folder_name}")
     
     # Upload images
     folder_url = f"https://drive.google.com/drive/folders/{chapter_folder_id}"

@@ -1,0 +1,48 @@
+# Credentials and sensitive files
+credentials.json
+service-account.json
+token.json
+config.json
+
+# Logs
+*.log
+manga_bot.log
+__logs__/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+.env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+chapter.html
+
+# State file (contains processing state)
+state.json
+
+# Assets that might be large
+assets/*.jpg
+assets/*.png
+!assets/banner.jpg
+!assets/banner2.png

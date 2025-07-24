@@ -13,6 +13,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -30,29 +32,18 @@ jobs:
         echo '${{ secrets.CREDENTIALS_JSON }}' > credentials.json
         echo '${{ secrets.TOKEN_JSON }}' > token.json
     
-    - name: Setup state repository
+    - name: Initialize state.json if not exists
       run: |
-        # Clone the state repository
-        git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/manga-bot-state.git state-repo
-        
-        # Copy existing state.json if it exists
-        if [ -f "state-repo/state.json" ]; then
-          cp state-repo/state.json .
-        else
+        if [ ! -f "state.json" ]; then
           echo '{}' > state.json
         fi
     
     - name: Run manga bot
       run: python bot.py
     
-    - name: Update state repository
+    - name: Commit and push state changes
       if: always()
       run: |
-        # Copy updated state.json to state repository
-        cp state.json state-repo/
-        
-        # Push changes to state repository
-        cd state-repo
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add state.json

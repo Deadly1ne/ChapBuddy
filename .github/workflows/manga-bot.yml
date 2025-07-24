@@ -29,22 +29,40 @@ jobs:
         echo '${{ secrets.CONFIG_JSON }}' > config.json
         echo '${{ secrets.SETTINGS_JSON }}' > settings.json
         echo '${{ secrets.CREDENTIALS_JSON }}' > credentials.json
-        echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > service-account.json
-        echo '${{ secrets.STATE_JSON }}' > state.json
+        echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > service_account.json
+    
+    - name: Clone or create state repository
+      run: |
+        git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/manga-bot-state.git state-repo 2>/dev/null || {
+          mkdir state-repo
+          cd state-repo
+          git init
+          git remote add origin https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/manga-bot-state.git
+          echo '{}' > state.json
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add state.json
+          git commit -m "Initialize state repository"
+          git push -u origin main 2>/dev/null || git push -u origin master 2>/dev/null || echo "Repository might already exist"
+        }
+        cp state-repo/state.json . 2>/dev/null || echo '{}' > state.json
     
     - name: Run manga bot
       run: python bot.py
     
-    - name: Update state file
+    - name: Update state repository
+      if: always()
       run: |
-        # Read the updated state.json and save it back to secrets
-        if [ -f state.json ]; then
-          echo "State file exists, updating..."
-          # Note: GitHub Actions can't update secrets automatically
-          # You'll need to manually update the STATE_JSON secret periodically
-          # or use a different approach like storing state in a separate repository
-        fi
-    
+        cp state.json state-repo/ 2>/dev/null || echo "No state file to update"
+        cd state-repo
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add state.json
+        git diff --staged --quiet || {
+          git commit -m "Update processing state - $(date)"
+          git push
+        }
+      
     - name: Upload logs as artifact
       if: always()
       uses: actions/upload-artifact@v3

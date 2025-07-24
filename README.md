@@ -96,7 +96,17 @@ To run the bot automatically every 20 minutes:
    - `SETTINGS_JSON`: Content of your settings.json file
    - `CREDENTIALS_JSON`: Content of your credentials.json file
    - `SERVICE_ACCOUNT_JSON`: Content of your service-account.json file
-   - `STATE_JSON`: Content of your state.json file (initially `{}`)
+
+### State Management
+
+The workflow automatically creates and manages a separate `manga-bot-state` repository in your account to store processing state. This eliminates the need for manual secret updates and provides:
+
+- ✅ **Automatic state persistence** across workflow runs
+- ✅ **No manual intervention** required
+- ✅ **Clean separation** of code and state
+- ✅ **Version history** of state changes
+
+The state repository will be created automatically on the first workflow run.
 
 4. The workflow will automatically run every 20 minutes
 5. You can also trigger it manually from the Actions tab

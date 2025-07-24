@@ -59,7 +59,7 @@ jobs:
         git add state.json
         git diff --staged --quiet || {
           git commit -m "Update processing state - $(date)"
-          git push
+          git push origin main 2>/dev/null || git push origin master 2>/dev/null || echo "Failed to push to remote"
         }
       
     - name: Upload logs

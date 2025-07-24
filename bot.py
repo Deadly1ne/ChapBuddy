@@ -254,6 +254,25 @@ def extract_part_number(url):
         
     return 0
 
+def extract_chapter_number_from_url(url):
+    """Extract chapter number from URL for validation."""
+    # Pattern for chapter-X or chapter/X
+    chapter_match = re.search(r'chapter[/-](\d+)', url)
+    if chapter_match:
+        return int(chapter_match.group(1))
+    
+    # Pattern for ch-X or ch/X
+    chapter_match = re.search(r'ch[/-](\d+)', url)
+    if chapter_match:
+        return int(chapter_match.group(1))
+    
+    # Pattern for c-X or c/X
+    chapter_match = re.search(r'c[/-](\d+)', url)
+    if chapter_match:
+        return int(chapter_match.group(1))
+    
+    return 0  # Default if no chapter number found
+
 def extract_parts_from_title(title):
     """Extract part information from chapter title using (current/total) pattern"""
     try:
@@ -425,7 +444,13 @@ def process_chapter(chapter_url, series_url, chapter_title=None):
             
             # Remove duplicates
             images = list(dict.fromkeys(images))
-            logger.info(f"Found {len(images)} images in this part")
+            logger.info(f"Part {part_count+1}/{expected_total_parts}: Found {len(images)} images")
+            
+            # Validate we're getting reasonable number of images per part
+            if len(images) == 0 and part_count > 0:
+                logger.warning(f"No images found on part {part_count+1}, this might indicate navigation issues")
+            elif len(images) > 50:  # Sanity check
+                logger.warning(f"Unusually high number of images ({len(images)}) on part {part_count+1}, possible cross-chapter contamination")
             
             # Create content signature to detect duplicates
             content_signature = tuple(images[:10]) if images else ()
@@ -434,7 +459,7 @@ def process_chapter(chapter_url, series_url, chapter_title=None):
             # Dynamic content checking - stop if we see duplicate content after processing expected parts
             min_parts_before_content_check = min(2, expected_total_parts)
             if content_signature and content_signature in processed_chunks and part_count >= min_parts_before_content_check:
-                logger.warning(f"Content already processed, breaking loop")
+                logger.warning(f"Content already processed, breaking loop to prevent duplicates")
                 break
             processed_chunks.add(content_signature)
             
@@ -473,33 +498,107 @@ def process_chapter(chapter_url, series_url, chapter_title=None):
                         logger.error(f"Image download error (attempt {attempt+1}/3): {e}")
                         time.sleep(2 ** attempt)  # Exponential backoff
             
-            # Check for next part
-            next_link = None
-            next_part_div = soup.select_one('div.next_chapter a[href*="comic/chapter"]')
-            if not next_part_div:
-                next_part_div = soup.select_one('div.next_chapter a')
-            
+            # Check for next part - prioritize part navigation over chapter navigation
             next_url = None
             next_part_number = 0
             
-            if next_part_div and next_part_div.get('href'):
-                next_url = next_part_div.get('href')
-                logger.info(f"Extracted next URL: {next_url}")
+            # Extract current chapter number for validation
+            current_chapter_num = extract_chapter_number_from_url(current_url)
+            
+            # First, try to find next part link (more specific selectors)
+            next_part_selectors = [
+                'a[href*="_2.html"]',  # Direct part 2 link
+                'a[href*="_3.html"]',  # Direct part 3 link  
+                'a[href*="_4.html"]',  # Direct part 4 link
+                'div.next_page a',      # Next page within chapter
+                'div.page_next a',      # Alternative next page selector
+                '.next-part a',         # Next part selector
+                '.page-nav .next a'     # Page navigation next
+            ]
+            
+            next_part_div = None
+            for selector in next_part_selectors:
+                next_part_div = soup.select_one(selector)
+                if next_part_div and next_part_div.get('href'):
+                    candidate_url = next_part_div.get('href')
+                    # Validate this is still the same chapter
+                    if candidate_url.startswith('/'):
+                        base_domain = '/'.join(current_url.split('/')[:3])
+                        candidate_url = base_domain + candidate_url
+                    elif not candidate_url.startswith('http'):
+                        candidate_url = urljoin(current_url, candidate_url)
+                    
+                    candidate_chapter_num = extract_chapter_number_from_url(candidate_url)
+                    if candidate_chapter_num == current_chapter_num:
+                        next_url = candidate_url
+                        logger.info(f"Found same-chapter next part: {next_url}")
+                        break
+                    else:
+                        logger.info(f"Skipping cross-chapter link: {candidate_url} (chapter {candidate_chapter_num} != {current_chapter_num})")
+            
+            # If no specific part navigation found, try general next_chapter but validate
+            if not next_url:
+                next_chapter_div = soup.select_one('div.next_chapter a[href*="comic/chapter"]')
+                if not next_chapter_div:
+                    next_chapter_div = soup.select_one('div.next_chapter a')
                 
+                if next_chapter_div and next_chapter_div.get('href'):
+                    candidate_url = next_chapter_div.get('href')
+                    logger.info(f"Checking next_chapter link: {candidate_url}")
+                    
+                    # Handle relative URLs
+                    if candidate_url.startswith('/'):
+                        base_domain = '/'.join(current_url.split('/')[:3])
+                        candidate_url = base_domain + candidate_url
+                    elif not candidate_url.startswith('http'):
+                        candidate_url = urljoin(current_url, candidate_url)
+                    
+                    # Validate this is still the same chapter
+                    candidate_chapter_num = extract_chapter_number_from_url(candidate_url)
+                    if candidate_chapter_num == current_chapter_num:
+                        next_url = candidate_url
+                        logger.info(f"Validated same-chapter next link: {next_url}")
+                    else:
+                        logger.info(f"Rejecting cross-chapter link: {candidate_url} (chapter {candidate_chapter_num} != {current_chapter_num})")
+            
+            # If we couldn't find a next part through navigation, try generating the URL
+            if not next_url and part_count < expected_total_parts:
+                # Try to generate next part URL based on current URL pattern
+                current_part_num = extract_part_number(current_url)
+                if current_part_num > 0:
+                    next_part_num = current_part_num + 1
+                    generated_url = None
+                    
+                    if '_' in current_url and '.html' in current_url:
+                        # Pattern: 0_226.html -> 0_226_2.html -> 0_226_3.html -> 0_226_4.html
+                        base_url = current_url.split('.html')[0]
+                        
+                        # Extract the original chapter number (e.g., 226 from 0_226 or 0_226_2)
+                        if f'_{current_part_num}' in base_url:
+                            # Remove only the part suffix, keeping the chapter format (0_226)
+                            chapter_base = base_url.rsplit(f'_{current_part_num}', 1)[0]
+                            generated_url = chapter_base + f'_{next_part_num}.html'
+                        elif current_part_num == 1 and '_' in base_url:
+                            # First part (no suffix) -> add _2, _3, _4
+                            generated_url = base_url + f'_{next_part_num}.html'
+                    
+                    # Validate generated URL is still same chapter
+                    if generated_url:
+                        generated_chapter_num = extract_chapter_number_from_url(generated_url)
+                        if generated_chapter_num == current_chapter_num:
+                            next_url = generated_url
+                            logger.info(f"Generated valid same-chapter URL: {next_url}")
+                        else:
+                            logger.warning(f"Generated URL crosses chapters: {generated_url} (chapter {generated_chapter_num} != {current_chapter_num})")
+                            logger.info(f"Stopping part processing to prevent cross-chapter issues")
+            
+            if next_url:
                 # Remove fragments like #bottom
                 next_url = next_url.split('#')[0]
-                
-                # Handle relative URLs
-                if next_url.startswith('/'):
-                    base_domain = '/'.join(current_url.split('/')[:3])
-                    next_url = base_domain + next_url
-                elif not next_url.startswith('http'):
-                    next_url = urljoin(current_url, next_url)
-                
                 # Normalize next URL
                 next_url = normalize_url(next_url)
                 next_part_number = extract_part_number(next_url)
-                logger.info(f"Normalized next URL: {next_url}, part number: {next_part_number}")
+                logger.info(f"Final next URL: {next_url}, part number: {next_part_number}")
             
             
             # Create path_part_key for next URL to check duplicates
@@ -577,7 +676,25 @@ def process_chapter(chapter_url, series_url, chapter_title=None):
                     logger.info(f"No next part link found - chapter complete ({part_count}/{expected_total_parts} parts processed)")
                 current_url = None
         
-        logger.info(f"Total images processed: {processed_images}")
+        # Final validation and summary
+        logger.info(f"Chapter processing completed:")
+        logger.info(f"  - Expected parts: {expected_total_parts}")
+        logger.info(f"  - Processed parts: {part_count}")
+        logger.info(f"  - Total images collected: {len(all_images)}")
+        logger.info(f"  - Images processed: {processed_images}")
+        if part_count > 0:
+            logger.info(f"  - Average images per part: {len(all_images)/part_count:.1f}")
+        
+        # Warn if we processed significantly different number of parts than expected
+        if abs(part_count - expected_total_parts) > 1:
+            logger.warning(f"Part count mismatch: expected {expected_total_parts}, processed {part_count}")
+        
+        # Warn if we got unusually few images (less than 5 per part on average)
+        if part_count > 0:
+            avg_images_per_part = len(all_images) / part_count
+            if avg_images_per_part < 5:
+                logger.warning(f"Low image count: {avg_images_per_part:.1f} images per part, possible collection issues")
+        
         return all_images, real_url
         
     except Exception as e:

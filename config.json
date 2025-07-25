@@ -1,25 +1,29 @@
 {
   "series": [
     {
-      "id": "lord-of-summoming",
-      "name": "Lord Of Summomning",
+      "id": "lord-of-summoning-when-the-world-changes",
+      "name": "Lord of Summoning When the World Changes",
       "manga_url": "https://www.baozimh.com/comic/zhaohuanzhizhudangyibianjianglinrenjian-iciyuandongman",
       "drive_folder_id": "",
       "drive_folder_fast_id": "1p9hSySyIDaMEFl5nJUcyPlfaknSf-a0D"
     },
     {
-      "id": "solo-leveling",
-      "name": "Solo Leveling",
-      "manga_url": "https://www.baozimh.com/comic/dudurenshijianshuzhang"
+      "id": "all-starts-with-ubume",
+      "name": "All Starts With Ubume",
+      "manga_url": "https://www.baozimh.com/comic/congguhuoniaokaishi-zhihuawenhua",
+      "drive_folder_id": "",
+      "drive_folder_fast_id": ""
     },
     {
-      "id": "tower-of-god",
-      "name": "Tower of God",
-      "manga_url": "https://www.baozimh.com/comic/shenzhi-ta"
+      "id": "beast-taming",
+      "name": "Beast Taming",
+      "manga_url": "https://www.baozimh.com/comic/quanminyushoukaijushanhaijinghengsaoquanqiu-qitumanhua",
+      "drive_folder_id": "",
+      "drive_folder_fast_id": ""
     },
     {
-      "id": "one-hundred-tribulation",
-      "name": "One Hundred Tribulation",
+      "id": "one-hundred-thousand-years-of-tribulation-by-heavenly-thunder",
+      "name": "One Hundred Thousand Years of Tribulation by Heavenly Thunder",
       "manga_url": "https://www.baozimh.com/comic/leijieshimonian-denghao",
       "drive_folder_id": ""
     }

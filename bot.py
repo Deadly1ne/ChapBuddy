@@ -9,7 +9,7 @@ import logging
 from bs4 import BeautifulSoup
 from PIL import Image, UnidentifiedImageError
 from io import BytesIO
-from discord_webhook import DiscordWebhook
+from discord_webhook import DiscordWebhook, DiscordEmbed
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -18,6 +18,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
 from urllib.parse import urljoin, urlparse, urlunparse
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -718,7 +719,7 @@ def stitch_images(images, max_height=12000):
         
         # Resize images to consistent width (SmartStitch requirement)
         widths = [img.width for img in images]
-        target_width = max(widths)  # Use maximum width for best quality
+        target_width = 800  # Fixed width of 800px
         
         resized_images = []
         for img in images:
@@ -769,8 +770,8 @@ def stitch_images_fallback(images, max_height=15000):
         return []
     
     try:
-        # Find the maximum width
-        max_width = max(img.width for img in images)
+        # Set fixed width to 800px
+        max_width = 800
         
         sections = []
         current_section = []
@@ -847,6 +848,7 @@ def upload_to_drive(service, images, series, chapter_number, max_retries=3):
     return None, False
 
 def _upload_to_drive_internal(service, images, series, chapter_number):
+    global settings, config
     # Get or create root comics folder
     root_folder_id = settings.get('root_drive_folder_id')
     if not root_folder_id:
@@ -866,8 +868,7 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
         with open('settings.json', 'w') as f:
             json.dump(settings, f, indent=2)
         
-        # Reload settings to ensure in-memory variable is updated
-        global settings
+        # Reload settings to ensure in-memory variable reflects the changes
         settings = load_settings()
         
         logger.info(f"Created root comics folder ID: {root_folder_id}")
@@ -896,8 +897,7 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
         with open('config.json', 'w') as f:
             json.dump(config, f, indent=2)
         
-        # Reload config to ensure in-memory variable is updated
-        global config
+        # Reload config to ensure in-memory variable reflects the changes
         config = load_config()
         
         logger.info(f"Created series folder for {series['name']}: {series_folder_id}")
@@ -986,37 +986,37 @@ def format_chapter_title_arabic(chapter_title, chapter_number):
 # 6. Discord notification
 def send_notification(folder_url, chapter_url, series, chapter_number, chapter_title, processing_success, upload_success):
     webhook_url = series.get('discord_webhook') or settings.get('discord_webhook')
-    
     if not webhook_url:
         logger.warning("No Discord webhook configured")
         return
-    
-    try:
-        # Format chapter title with Arabic numerals
-        formatted_title = format_chapter_title_arabic(chapter_title, chapter_number)
-        
-        if not processing_success:
-            content = f"⚠️ **PROCESSING FAILED**\n**{series['name']}** - {formatted_title}"
-        elif not upload_success:
-            content = f"⚠️ **UPLOAD FAILED**\n**{series['name']}** - {formatted_title}"
-        else:
-            content = f"📚 **{series['name']} - {formatted_title}**\n"
-            content += f"🔗 [Read Online]({chapter_url})\n"
-            content += f"📂 [Download Folder]({folder_url})"
-        
-        webhook = DiscordWebhook(
-            url=webhook_url,
-            content=content,
-            rate_limit_retry=True
-        )
-        response = webhook.execute()
-        
-        if response.status_code == 200:
-            logger.info("Discord notification sent")
-        else:
-            logger.error(f"Discord error: {response.status_code}")
-    except Exception as e:
-        logger.error(f"Discord notification failed: {e}")
+
+    webhook = DiscordWebhook(url=webhook_url, rate_limit_retry=True)
+
+    # Build embed only on full success
+    if processing_success and upload_success:
+        embed = DiscordEmbed(title="🎉 New Chapter Alert! 🎉", color="03b2f8")
+        embed.add_embed_field(name="Manga:", value=f"**{series.get('name', 'Unknown')}**", inline=False)
+        embed.add_embed_field(name="New Chapter:", value=f"**Chapter {chapter_number}**", inline=False)
+        embed.add_embed_field(name="**Read it here**", value=f"[Click to Read]({chapter_url})", inline=False)
+        if folder_url:
+            embed.add_embed_field(name="**Google Drive**", value=f"[View on Drive]({folder_url})", inline=False)
+
+    else:
+        # Fallback plain-text embed for failures
+        status = "⚠️ PROCESSING FAILED" if not processing_success else "⚠️ UPLOAD FAILED"
+        embed = DiscordEmbed(title=status, color="ff0000")
+        embed.add_embed_field(name=series.get('name', 'Unknown'), value=f"Chapter {chapter_number}", inline=False)
+
+    # Footer with timestamp
+    now = datetime.now().strftime("%I:%M %p")
+    embed.set_footer(text=f"Baozimh Chapter Notifier • Today at {now}")
+
+    webhook.add_embed(embed)
+    response = webhook.execute()
+    if response.status_code == 200:
+        logger.info("Discord notification sent")
+    else:
+        logger.error(f"Discord error: {response.status_code}")
 
 # Get all new chapters for a series
 def get_new_chapters(series):

@@ -13,6 +13,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.PAT_TOKEN || github.token }}
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -30,37 +32,29 @@ jobs:
         echo '${{ secrets.CREDENTIALS_JSON }}' > credentials.json
         echo '${{ secrets.TOKEN_JSON }}' > token.json
     
-    - name: Clone or create state repository
+    - name: Initialize state.json if not exists
       run: |
-        git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/manga-bot-state.git state-repo 2>/dev/null || {
-          mkdir state-repo
-          cd state-repo
-          git init
-          git remote add origin https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/manga-bot-state.git
+        if [ ! -f "state.json" ]; then
           echo '{}' > state.json
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add state.json
-          git commit -m "Initialize state repository"
-          git push -u origin main 2>/dev/null || git push -u origin master 2>/dev/null || echo "Repository might already exist"
-        }
-        cp state-repo/state.json . 2>/dev/null || echo '{}' > state.json
+        fi
     
     - name: Run manga bot
       run: python bot.py
     
-    - name: Update state repository
+    - name: Commit and push state changes
       if: always()
       run: |
-        cp state.json state-repo/ 2>/dev/null || echo "No state file to update"
-        cd state-repo
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add state.json
-        git diff --staged --quiet || {
+        
+        # Only commit if there are changes
+        if ! git diff --staged --quiet; then
           git commit -m "Update processing state - $(date)"
-          git push origin main 2>/dev/null || git push origin master 2>/dev/null || echo "Failed to push to remote"
-        }
+          git push origin main
+        else
+          echo "No changes to state.json"
+        fi
       
     - name: Upload logs
       uses: actions/upload-artifact@v4

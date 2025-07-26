@@ -41,19 +41,19 @@ def trim_watermark(img):
         crop_top = min(top_trim, int(height * 0.15))
         crop_bottom = max(height - bottom_trim, int(height * 0.85))
         
-        # Much stricter criteria: require HIGH confidence and LARGE watermark size
-        should_trim_top = crop_top > 50 and top_confidence >= 3  # All 3 methods must agree
-        should_trim_bottom = (height - crop_bottom) > 50 and bottom_confidence >= 3
+        # EXTREMELY strict criteria: require MAXIMUM confidence and VERY LARGE watermark size
+        should_trim_top = crop_top > 80 and top_confidence >= 3  # All 3 methods must agree AND large watermark
+        should_trim_bottom = (height - crop_bottom) > 80 and bottom_confidence >= 3
         
         if should_trim_top or should_trim_bottom:
-            if (crop_bottom - crop_top) >= int(height * 0.8):  # Preserve 80% of content
+            if (crop_bottom - crop_top) >= int(height * 0.9):  # Preserve 90% of content
                 cropped_img = img.crop((0, crop_top, width, crop_bottom))
-                print(f"HIGH-CONFIDENCE watermark detected and trimmed: top={crop_top}px (conf:{top_confidence}), bottom={height-crop_bottom}px (conf:{bottom_confidence})")
+                print(f"MAXIMUM-CONFIDENCE watermark detected and trimmed: top={crop_top}px (conf:{top_confidence}), bottom={height-crop_bottom}px (conf:{bottom_confidence})")
                 return cropped_img
             else:
                 print(f"Watermark detected but trimming would remove too much content. Skipping trim.")
         else:
-            print(f"No high-confidence watermark detected. Top: {crop_top}px (conf:{top_confidence}), Bottom: {height-crop_bottom}px (conf:{bottom_confidence})")
+            print(f"No maximum-confidence watermark detected. Top: {crop_top}px (conf:{top_confidence}), Bottom: {height-crop_bottom}px (conf:{bottom_confidence})")
         
         return img
         
@@ -269,15 +269,15 @@ def _detect_watermark_opencv(region, position):
         significant_boundaries = []
         confidence = 0
         
-        if text_boundary > 40:  # Much higher threshold for text detection
+        if text_boundary > 100:  # VERY high threshold for text detection
             significant_boundaries.append(text_boundary)
             confidence += 1
             
-        if edge_boundary > 40:  # Much higher threshold for edge detection
+        if edge_boundary > 100:  # VERY high threshold for edge detection
             significant_boundaries.append(edge_boundary)
             confidence += 1
             
-        if color_boundary > 40:  # Much higher threshold for color pattern
+        if color_boundary > 100:  # VERY high threshold for color pattern
             significant_boundaries.append(color_boundary)
             confidence += 1
         
@@ -320,8 +320,8 @@ def _detect_text_boundary(gray, position):
                 if w > 50 and h > 15:  # Much larger minimum size for text
                     max_y = max(max_y, y + h)
                     text_regions += 1
-            # Only return if we found multiple substantial text regions
-            return max_y if text_regions >= 3 else 0
+            # Only return if we found MANY substantial text regions (watermarks have lots of text)
+            return max_y if text_regions >= 5 else 0
         
         elif position == 'bottom':
             # Find the highest text region from bottom - much stricter criteria
@@ -332,8 +332,8 @@ def _detect_text_boundary(gray, position):
                 if w > 50 and h > 15:  # Much larger minimum size for text
                     min_y = min(min_y, y)
                     text_regions += 1
-            # Only return if we found multiple substantial text regions
-            return height - min_y if text_regions >= 3 else 0
+            # Only return if we found MANY substantial text regions (watermarks have lots of text)
+            return height - min_y if text_regions >= 5 else 0
         
         return 0
         
@@ -353,17 +353,17 @@ def _detect_edge_boundary(gray, position):
         # Edge detection
         edges = cv2.Canny(blurred, 50, 150)
         
-        # Analyze edge density by rows - much more conservative
+        # Analyze edge density by rows - EXTREMELY conservative
         if position == 'top':
             for y in range(height):
                 row_edges = np.sum(edges[y, :]) / width
-                if row_edges < 8:  # Much higher threshold - only very low edge density
+                if row_edges < 2:  # EXTREMELY high threshold - only completely blank areas
                     return y
         
         elif position == 'bottom':
             for y in range(height - 1, -1, -1):
                 row_edges = np.sum(edges[y, :]) / width
-                if row_edges < 8:  # Much higher threshold - only very low edge density
+                if row_edges < 2:  # EXTREMELY high threshold - only completely blank areas
                     return height - y
         
         return 0
@@ -389,13 +389,13 @@ def _detect_color_boundary(region, position):
                 mean_color = np.mean(row, axis=0)
                 std_color = np.std(row, axis=0)
                 
-                # Much stricter watermark characteristics
-                is_very_uniform = np.mean(std_color) < 5  # Very low variation
-                is_very_light = np.mean(mean_color) > 240   # Very light background
+                # EXTREMELY strict watermark characteristics
+                is_extremely_uniform = np.mean(std_color) < 2  # Almost no variation
+                is_almost_white = np.mean(mean_color) > 250   # Almost pure white background
                 
-                # Only detect if we have VERY uniform, VERY light watermark patterns
-                # AND we hit significantly different content
-                if not (is_very_uniform and is_very_light) and np.mean(mean_color) < 180:
+                # Only detect if we have EXTREMELY uniform, ALMOST WHITE watermark patterns
+                # AND we hit very dark content (manga panels)
+                if not (is_extremely_uniform and is_almost_white) and np.mean(mean_color) < 150:
                     return y
         
         elif position == 'bottom':
@@ -406,13 +406,13 @@ def _detect_color_boundary(region, position):
                 mean_color = np.mean(row, axis=0)
                 std_color = np.std(row, axis=0)
                 
-                # Much stricter watermark characteristics
-                is_very_uniform = np.mean(std_color) < 5  # Very low variation
-                is_very_light = np.mean(mean_color) > 240   # Very light background
+                # EXTREMELY strict watermark characteristics
+                is_extremely_uniform = np.mean(std_color) < 2  # Almost no variation
+                is_almost_white = np.mean(mean_color) > 250   # Almost pure white background
                 
-                # Only detect if we have VERY uniform, VERY light watermark patterns
-                # AND we hit significantly different content
-                if not (is_very_uniform and is_very_light) and np.mean(mean_color) < 180:
+                # Only detect if we have EXTREMELY uniform, ALMOST WHITE watermark patterns
+                # AND we hit very dark content (manga panels)
+                if not (is_extremely_uniform and is_almost_white) and np.mean(mean_color) < 150:
                     return height - y
         
         return 0

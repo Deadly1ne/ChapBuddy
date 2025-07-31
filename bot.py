@@ -530,12 +530,18 @@ def process_chapter(chapter_url, series_url, chapter_title=None):
                         candidate_url = urljoin(current_url, candidate_url)
                     
                     candidate_chapter_num = extract_chapter_number_from_url(candidate_url)
-                    if candidate_chapter_num == current_chapter_num:
+                    # Only accept if both URLs have valid chapter numbers AND they match
+                    if (candidate_chapter_num > 0 and current_chapter_num > 0 and 
+                        candidate_chapter_num == current_chapter_num):
                         next_url = candidate_url
                         logger.info(f"Found same-chapter next part: {next_url}")
                         break
                     else:
-                        logger.info(f"Skipping cross-chapter link: {candidate_url} (chapter {candidate_chapter_num} != {current_chapter_num})")
+                        if candidate_chapter_num == 0 or current_chapter_num == 0:
+                            logger.info(f"Skipping part link due to failed chapter number extraction: {candidate_url} (candidate: {candidate_chapter_num}, current: {current_chapter_num})")
+                        else:
+                            logger.info(f"Skipping cross-chapter link: {candidate_url} (chapter {candidate_chapter_num} != {current_chapter_num})")
+                        continue  # Try next selector
             
             # If no specific part navigation found, try general next_chapter but validate
             if not next_url:
@@ -556,11 +562,17 @@ def process_chapter(chapter_url, series_url, chapter_title=None):
                     
                     # Validate this is still the same chapter
                     candidate_chapter_num = extract_chapter_number_from_url(candidate_url)
-                    if candidate_chapter_num == current_chapter_num:
+                    # IMPORTANT: Only accept if both URLs have valid chapter numbers AND they match
+                    # This prevents following next chapter links when chapter detection fails (returns 0)
+                    if (candidate_chapter_num > 0 and current_chapter_num > 0 and 
+                        candidate_chapter_num == current_chapter_num):
                         next_url = candidate_url
                         logger.info(f"Validated same-chapter next link: {next_url}")
                     else:
-                        logger.info(f"Rejecting cross-chapter link: {candidate_url} (chapter {candidate_chapter_num} != {current_chapter_num})")
+                        if candidate_chapter_num == 0 or current_chapter_num == 0:
+                            logger.info(f"Rejecting next_chapter link due to failed chapter number extraction: {candidate_url} (candidate: {candidate_chapter_num}, current: {current_chapter_num})")
+                        else:
+                            logger.info(f"Rejecting cross-chapter link: {candidate_url} (chapter {candidate_chapter_num} != {current_chapter_num})")
             
             # If we couldn't find a next part through navigation, try generating the URL
             if not next_url and part_count < expected_total_parts:
@@ -613,6 +625,12 @@ def process_chapter(chapter_url, series_url, chapter_title=None):
             # 2. We haven't processed too many parts (use detected total or safety limit)
             # 3. It's a new path/part combination (stop if we've seen this exact URL before)
             # Dynamic part limit - continue until expected parts are processed or safety limit reached
+            
+            # Special handling for single-page chapters: stop immediately after processing 1 part
+            if expected_total_parts == 1 and part_count >= 1:
+                logger.info(f"Single-page chapter completed - stopping after {part_count} part(s)")
+                current_url = None
+                continue
             
             max_allowed_parts = min(expected_total_parts + 1, MAX_PARTS)  # Allow 1 extra part for safety
             if next_url and part_count < max_allowed_parts:

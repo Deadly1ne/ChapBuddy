@@ -962,7 +962,7 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
         try:
             # Memory-efficient processing
             buffer = BytesIO()
-            img.save(buffer, format='JPEG', quality=85, optimize=True)
+            img.save(buffer, format='JPEG', quality=100, optimize=True)
             buffer.seek(0)
             del img
             gc.collect()

@@ -272,6 +272,11 @@ def extract_chapter_number_from_url(url):
     if chapter_match:
         return int(chapter_match.group(1))
     
+    # Pattern for 0_XX.html or 0_XX_Y.html format (common in baozimh and similar sites)
+    chapter_match = re.search(r'/(\d+)_(\d+)(?:_(\d+))?\.html', url)
+    if chapter_match:
+        return int(chapter_match.group(2))  # Return the middle number (chapter number)
+    
     return 0  # Default if no chapter number found
 
 def extract_parts_from_title(title):

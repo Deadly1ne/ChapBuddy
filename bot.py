@@ -273,6 +273,7 @@ def extract_chapter_number_from_url(url):
         return int(chapter_match.group(1))
     
     # Pattern for 0_XX.html or 0_XX_Y.html format (common in baozimh and similar sites)
+    # This handles both formats: /0_19.html and /0_19_2.html where 19 is the chapter number
     chapter_match = re.search(r'/(\d+)_(\d+)(?:_(\d+))?\.html', url)
     if chapter_match:
         return int(chapter_match.group(2))  # Return the middle number (chapter number)
@@ -973,7 +974,7 @@ def _upload_to_drive_internal(service, images, series, chapter_number):
             gc.collect()
             
             # Upload
-            file_name = f"Part {idx+1}.jpg"
+            file_name = f"{idx+1}.jpg"
             file_metadata = {
                 'name': file_name,
                 'parents': [chapter_folder_id]

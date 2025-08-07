@@ -360,6 +360,10 @@ def check_new_chapter(series):
 # 2. Extract real chapter URL
 def get_real_chapter_url(url, series_url):
     logger.info(f"Resolving: {url}")
+    
+    # Apply URL transformation
+    url = re.sub(r'^https?:\/\/(?:[\ww-]+)\.baozicdn\.com\/(.+)$', 'https://static-tw.baozimh.com/\1', url)
+    
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         'Referer': series_url

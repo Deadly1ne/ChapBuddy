@@ -1,4 +1,4 @@
-name: Manga Bot Auto Run
+name: ChapBuddy
 
 on:
   schedule:

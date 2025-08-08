@@ -63,13 +63,14 @@ def get_drive_service():
     creds = None
     
     try:
-        # Try service account authentication first (for GitHub Actions)
-        if os.path.exists('service_account.json'):
-            logger.info("Using service account authentication")
-            creds = ServiceAccountCredentials.from_service_account_file(
-                'service_account.json',
-                scopes=SCOPES
-            )
+        # Handle CI environment with OAuth token
+        if os.getenv('CI'):
+            logger.info("Using CI environment OAuth flow")
+            if not os.path.exists(TOKEN_FILE):
+                raise Exception("token.json must be committed for CI environments")
+            creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+            if creds and creds.expired:
+                creds.refresh(Request())
             return build('drive', 'v3', credentials=creds)
         
         # Fall back to interactive authentication (for local development)
@@ -89,7 +90,13 @@ def get_drive_service():
                     'credentials.json',
                     scopes=SCOPES
                 )
-                creds = flow.run_local_server(port=0)
+                creds = flow.run_local_server(
+                    port=0,
+                    authorization_prompt_message='Please visit this URL to authorize access (will automatically open browser): {url}',
+                    open_browser=True,
+                    access_type='offline',
+                    prompt='consent'
+                )
                 
                 # Save credentials for next run
                 with open(TOKEN_FILE, 'w') as token:

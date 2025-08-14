@@ -1053,7 +1053,41 @@ def send_notification(folder_url, chapter_url, series, chapter_number, chapter_t
     else:
         logger.error(f"Discord error: {response.status_code}")
 
-# Get all new chapters for a series
+# Discord notifications with validation
+def send_discord_notification(message):
+    if 'discord_webhook' not in settings:
+        logger.error('Discord webhook missing from settings.json')
+        return
+
+    try:
+        webhook = DiscordWebhook(
+            url=settings['discord_webhook'],
+            rate_limit_retry=True
+        )
+        embed = DiscordEmbed(
+            title='Manga Bot Update',
+            description=message,
+            color=0x00ff00
+        )
+        webhook.add_embed(embed)
+        response = webhook.execute()
+        
+        if response.status_code != 200:
+            logger.error(f'Discord API error: {response.status_code} {response.text}')
+    except KeyError:
+        logger.error('Missing discord_webhook in settings.json')
+    except Exception as e:
+        logger.error(f'Discord notification failed: {str(e)}')
+
+# Add notification call in main workflow
+def main():
+    try:
+        send_discord_notification('Manga bot started successfully')
+        # ... rest of main function
+    except Exception as e:
+        send_discord_notification(f'Critical error: {str(e)}')
+        raise
+
 def get_new_chapters(series):
     """Get all new chapters that need to be processed"""
     logger.info(f"Checking: {series['manga_url']}")
